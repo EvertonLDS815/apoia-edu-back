@@ -63,7 +63,7 @@ router.get("/users", async (req, res) => {
         console.error('Erro ao buscar usuários:', err);
         return res.status(500).json({ message: 'Erro ao buscar usuários' });
     }
-});
+}); // Não vou utilizar essa rota
 
 // Get user by token
 router.get("/user", auth, async (req, res) => {
@@ -127,7 +127,7 @@ router.post('/user', async (req, res) => {
             error: err.message
         });
     }
-});
+}); // Não vou utilizar essa rota
 
 router.put("/user/:id", auth, async (req, res) => {
     const { id } = req.params;
@@ -140,9 +140,9 @@ router.put("/user/:id", auth, async (req, res) => {
         console.error('Erro ao atualizar usuário:', err);
         return res.status(500).json({ message: 'Erro ao atualizar usuário' });
     }
-});
+}); // Não vou utilizar essa rota
 
-router.delete("/user/:id", async (req, res) => {
+router.delete("/user/:id", auth, async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -152,7 +152,7 @@ router.delete("/user/:id", async (req, res) => {
         console.error('Erro ao deletar usuário:', err);
         return res.status(500).json({ message: 'Erro ao deletar usuário'});
     }
-});
+}); // Não vou utilizar essa rota
 
 // Login
 
@@ -193,8 +193,20 @@ router.post('/login', async (req, res) => {
     }
 });
 
-
 // Child Routes
+
+router.get("/child/:id", auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const child = await Child.findOne({ _id: id});
+
+        return res.status(200).json(child);
+
+    } catch(err) {
+        console.error(err)
+    }
+});
 
 // List Children by User
 
@@ -258,33 +270,51 @@ router.put("/child/:id", auth, async (req, res) => {
     }
 });
 
-router.delete("/child/:id", auth, async (req, res) => {
+router.delete("/child/record/:id", async (req, res) => {
     const { id } = req.params;
 
     try {
+        await Record.deleteMany({ childId: id });
         await Child.findByIdAndDelete(id);
         return res.sendStatus(204);
+
     } catch (err) {
-        console.error('Erro ao deletar criança:', err);
-        return res.status(500).json({ message: 'Erro ao deletar criança' });
+        console.error("Erro ao deletar criança:", err);
+
+        return res.status(500).json({
+            message: "Erro ao deletar criança"
+        });
     }
 });
 
 // Record Routes
 
 // get Records by Child ID
-router.get("/records/:childId", async (req, res) => {
+router.get("/records/:childId", auth, async (req, res) => {
     try {
         const { childId } = req.params;
-        const records = await Record.find({ childId }).populate({
-            path: 'childId',
-            populate: { path: 'userId' },
+
+        const records = await Record.find({ childId })
+            .sort({ date: -1 })
+            
+
+        const child = await Child.findOne({ _id: childId });
+
+        const lastRecordDate = records.length > 0
+            ? records[0].date
+            : null;
+
+        return res.json({
+            child,
+            records,
+            lastRecordDate
         });
 
-        return res.json(records);
     } catch (err) {
-        console.error('Erro ao buscar registros:', err);
-        return res.status(500).json({ message: 'Erro ao buscar registros' });
+        console.error("Erro ao buscar registros:", err);
+        return res.status(500).json({
+            message: "Erro ao buscar registros"
+        });
     }
 });
 
@@ -303,7 +333,7 @@ router.get("/records", auth, async (req, res) => {
       childId: { $in: childIds }
     })
       .populate("childId", "name")
-      .sort({ date: -1 });
+      .sort({ createdAt: -1 });
 
     return res.json(records);
   } catch (err) {
@@ -313,6 +343,29 @@ router.get("/records", auth, async (req, res) => {
       message: "Erro ao buscar registros"
     });
   }
+});
+
+
+router.get('/record/:recordId', auth, async (req, res) => {
+    try {
+        const { recordId } = req.params;
+
+        const getRecord = await Record.findById(recordId).populate('childId');
+        if (!getRecord) {
+            return res.status(404).json({
+                message: 'Registro não encontrado'
+            });
+        }
+
+        return res.status(200).json(getRecord);
+
+    } catch (err) {
+        console.error('Erro ao carregar registro:', err);
+
+        return res.status(500).json({
+            message: 'Erro ao carregar registro'
+        });
+    }
 });
 
 router.post('/record', auth, async (req, res) => {
@@ -358,11 +411,29 @@ router.post('/record', auth, async (req, res) => {
 });
 
 router.put("/record/:id", auth, async (req, res) => {
-    const { id } = req.params;
-    const record = req.body;
-
     try {
-        await Record.findByIdAndUpdate(id, record, { new: true });
+        const { id } = req.params;
+        const {
+                date,
+                behavior,
+                participation,
+                description,
+                childId
+                } = req.body;
+    
+        if (!date || !childId) {
+            return res.status(400).json({
+                message: 'A data e o ID da criança são obrigatórios'
+            });
+        }
+
+        await Record.findByIdAndUpdate(id, {
+            date,
+            behavior,
+            participation,
+            description,
+            childId
+        }, { new: true });
         return res.sendStatus(204);
     } catch (err) {
         console.error('Erro ao atualizar registro:', err);
@@ -370,14 +441,14 @@ router.put("/record/:id", auth, async (req, res) => {
     }
 });
 
-router.delete("/record/:id", async (req, res) => {
+router.delete("/record/:id", auth, async(req, res) => {
     const { id } = req.params;
 
     try {
         await Record.findByIdAndDelete(id);
         return res.sendStatus(204);
     } catch (err) {
-        console.error('Erro ao deletar registro:', err);
+        console.error('Erro ao deletar registro', err);
         return res.status(500).json({ message: 'Erro ao deletar registro' });
     }
 });

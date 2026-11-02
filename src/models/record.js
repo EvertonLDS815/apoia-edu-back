@@ -9,15 +9,17 @@ const recordSchema = new mongoose.Schema(
         behavior: {
             set: {
                     type: [String],
-                    enum: ['Ansioso(a)', 'Calmo(a)', 'Cooperativo(a)', 'Feliz', 'Inquieto(a)', 'Introvertido(a)', 'Nervoso(a)', 'Sociável'],
-                    default: []
+                    enum: ['Ansioso(a)', 'Calmo(a)', 'Cooperativo(a)', 'Feliz', 'Inquieto(a)', 'Introvertido(a)', 'Nervoso(a)', 'Sociável', 'Sonolento(a)'],
+                    default: [],
+                    required: true
                 },
         },
         participation: {
             set: {
                 type: [String],
                 enum: ['Participou sem apoio', 'Participou com apoio', 'Não participou'],
-                default: []
+                default: [],
+                required: true
             },
         },
         description: {
