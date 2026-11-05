@@ -129,16 +129,42 @@ router.post('/user', async (req, res) => {
     }
 }); // Não vou utilizar essa rota
 
-router.put("/user/:id", auth, async (req, res) => {
+router.put("/user/:id", async (req, res) => {
     const { id } = req.params;
     const { name, email, password, active } = req.body;
 
     try {
-        await User.findByIdAndUpdate(id, { name, email, password, active }, { new: true }).select('-password');
+        const updateData = {
+            name,
+            email,
+            active
+        };
+
+        if (password) {
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
+            
+
+        const user = await User.findByIdAndUpdate(
+            id,
+            updateData,
+        );
+
+        if (!user) {
+            return res.status(404).json({
+                message: 'Usuário não encontrado'
+            });
+        }
+
         return res.sendStatus(204);
+
     } catch (err) {
         console.error('Erro ao atualizar usuário:', err);
-        return res.status(500).json({ message: 'Erro ao atualizar usuário' });
+
+        return res.status(500).json({
+            message: 'Erro ao atualizar usuário'
+        });
     }
 }); // Não vou utilizar essa rota
 
