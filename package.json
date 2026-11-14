@@ -2,7 +2,7 @@
   "name": "ECC",
   "version": "1.0.0",
   "description": "Server to describe records",
-  "main": "index.js",
+  "main": "src/index.js",
   "author": "Everton Lino",
   "license": "MIT",
   "scripts": {
